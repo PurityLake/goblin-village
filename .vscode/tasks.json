@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run game",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}\\build\\bin\\Debug\\goblinvillage.exe"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+        }
+    ],
+}
