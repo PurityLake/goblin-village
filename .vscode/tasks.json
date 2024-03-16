@@ -7,7 +7,9 @@
       "windows": {
         "command": "${workspaceFolder}/build/bin/Debug/goblinvillage.exe"
       },
-      "problemMatcher": ["$msCompile"],
+      "problemMatcher": [
+        "$msCompile"
+      ],
       "group": {
         "kind": "build",
         "isDefault": true

@@ -3,12 +3,12 @@
     "-DVCPKG_APPLOCAL_DEPS=ON",
     "-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON",
     "-DVCPKG_MANIFEST_MODE=ON",
-    "-DVCPKG_TARGET_TRIPLET=x64-windows"
+    "-DVCPKG_TARGET_TRIPLET=x64-windows-static"
   ],
   "vcpkg.general.enable": true,
   "vcpkg.target.hostTriplet": "x64-windows",
-  "vcpkg.target.defaultTriplet": "x64-windows",
-  "vcpkg.target.useStaticLib": false,
+  "vcpkg.target.defaultTriplet": "x64-windows-static",
+  "vcpkg.target.useStaticLib": true,
   "cmake.configureSettings": {
     "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/vcpkg/scripts/buildsystems/vcpkg.cmake"
   },
