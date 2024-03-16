@@ -8,7 +8,7 @@ endif()
 
 project(goblinvillage
     VERSION 0.1
-    LANGUAGES CXX)
+    LANGUAGES C CXX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")  # Save all runtime files to this directory.
 
@@ -33,11 +33,22 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 endif()
 
+if (EMSCRIPTEN)
+    target_link_options(${PROJECT_NAME} PRIVATE --preload-file "${CMAKE_CURRENT_SOURCE_DIR}/data@data")
+    set_target_properties(
+        ${PROJECT_NAME}
+        PROPERTIES
+            SUFFIX ".HTML"
+    )
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 find_package(SDL2 CONFIG REQUIRED)
 find_package(libtcod CONFIG REQUIRED)
+find_package(OpenAL CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     SDL2::SDL2
     SDL2::SDL2main
-    libtcod::libtcod)
+    libtcod::libtcod
+    OpenAL::OpenAL)

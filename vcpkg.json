@@ -3,7 +3,9 @@
   "name": "goblinvillage",
   "version-semver": "0.0.0",
   "dependencies": [
-    "libtcod",
-    "sdl2"
+    "openal-soft",
+    "sdl2",
+    { "name": "libtcod", "default-features": true, "features": [ "png", "sdl", "unicode", "zlib" ] },
+    { "name": "sdl2", "default-features": false, "features": [ "x11" ], "platform": "linux" }
   ]
 }

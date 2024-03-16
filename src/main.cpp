@@ -5,6 +5,11 @@
 #include <iostream>
 #include <libtcod.hpp>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+
+#include "error.hpp"
+
 auto get_data_dir() -> std::filesystem::path {
   static auto root_dir = std::filesystem::path{"."};
 
@@ -40,8 +45,9 @@ void main_loop() {
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
       case SDL_QUIT:
-        std::exit(EXIT_SUCCESS);
-        break;
+#ifndef __EMSCRIPTEN__
+        throw QuitRequest{};
+#endif
       case SDL_KEYDOWN:
         switch (event.key.keysym.sym) {
           case SDLK_UP:
@@ -62,6 +68,12 @@ void main_loop() {
 }
 
 int main(int argc, char** argv) {
+  ALCdevice* device;
+  device = alcOpenDevice(nullptr);
+  if (!device) {
+    return EXIT_FAILURE;
+  }
+
   try {
     g_console = tcod::Console{70, 40};
     auto tileset = tcod::load_tilesheet(get_data_dir() / "dejavu16x16_gs_tc.png", {32, 8}, tcod::CHARMAP_TCOD);
@@ -88,11 +100,13 @@ int main(int argc, char** argv) {
       main_loop();
     }
 #endif
-
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return EXIT_FAILURE;
+  } catch (const QuitRequest& e) {
   }
 
-  return 0;
+  alcCloseDevice(device);
+
+  return EXIT_SUCCESS;
 }
