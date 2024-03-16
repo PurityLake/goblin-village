@@ -5,11 +5,9 @@
       "label": "Run game",
       "type": "shell",
       "windows": {
-        "command": "${workspaceFolder}\\build\\bin\\Debug\\goblinvillage.exe"
+        "command": "${workspaceFolder}/build/bin/Debug/goblinvillage.exe"
       },
-      "problemMatcher": [
-        "$msCompile"
-      ],
+      "problemMatcher": ["$msCompile"],
       "group": {
         "kind": "build",
         "isDefault": true
