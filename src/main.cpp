@@ -23,9 +23,13 @@ static constexpr auto WHITE = tcod::ColorRGB{255, 255, 255};
 static tcod::Console g_console;
 static tcod::Context g_context;
 
+struct Player {
+  int x, y;
+} player{10, 10};
+
 void main_loop() {
   g_console.clear();
-  tcod::print(g_console, {0, 0}, "Hello World", WHITE, std::nullopt);
+  tcod::print(g_console, {player.x, player.y}, "@", {{255, 255, 255}}, {{0, 0, 0}});
   g_context.present(g_console);
 
   // handle event
@@ -38,6 +42,21 @@ void main_loop() {
       case SDL_QUIT:
         std::exit(EXIT_SUCCESS);
         break;
+      case SDL_KEYDOWN:
+        switch (event.key.keysym.sym) {
+          case SDLK_UP:
+            player.y--;
+            break;
+          case SDLK_DOWN:
+            player.y++;
+            break;
+          case SDLK_LEFT:
+            player.x--;
+            break;
+          case SDLK_RIGHT:
+            player.x++;
+            break;
+        }
     }
   }
 }
