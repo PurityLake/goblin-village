@@ -1,6 +1,7 @@
 #include <SDL.h>
 
 #include <cstdlib>
+#include <cstdio>
 #include <filesystem>
 #include <iostream>
 #include <libtcod.hpp>
@@ -67,12 +68,50 @@ void main_loop() {
   }
 }
 
+static void list_audio_devices(const ALCchar* devices) {
+  const ALCchar *device = devices, *next = devices + 1;
+  size_t len = 0;
+
+  std::cout << "Devices list:\n";
+  std::cout << "-------------\n";
+  while (device && *device != '\0' && next && *next != '\0') {
+    std::fprintf(stdout, "%s\n", device);
+    len = std::strlen(device);
+    device += (len + 1);
+    next += (len + 2);
+  }
+  std::cout << "-------------\n";
+}
+
 int main(int argc, char** argv) {
   ALCdevice* device;
+  ALCcontext* context;
+  ALCenum error;
+
   device = alcOpenDevice(nullptr);
   if (!device) {
-    return EXIT_FAILURE;
+    std::cerr << "Failed to create device.\n";
+    goto failed;
   }
+
+  context = alcCreateContext(device, nullptr);
+  if (!alcMakeContextCurrent(context)) {
+    std::cerr << "Failed to set audio context current.\n";
+  }
+  error = alGetError();
+  if (error != AL_NO_ERROR) {
+    std::cerr << "Error creating device.\n";
+    goto failedCtx;
+  }
+
+  ALboolean enumeration;
+  enumeration = alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
+  if (enumeration == AL_FALSE) {
+    std::cerr << "Can't enumerate OpenAL Devices.\n";
+    goto failedDev;
+  }
+
+  list_audio_devices(alcGetString(nullptr, ALC_DEVICE_SPECIFIER));
 
   try {
     g_console = tcod::Console{70, 40};
@@ -102,11 +141,23 @@ int main(int argc, char** argv) {
 #endif
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
-    return EXIT_FAILURE;
+    goto failedCtx;
   } catch (const QuitRequest& e) {
   }
 
+  alcMakeContextCurrent(nullptr);
+  alcDestroyContext(context);
   alcCloseDevice(device);
 
   return EXIT_SUCCESS;
+
+failedCtx:
+  alcMakeContextCurrent(nullptr);
+  alcDestroyContext(context);
+
+failedDev:
+  alcCloseDevice(device);
+
+failed:
+  return EXIT_FAILURE;
 }
