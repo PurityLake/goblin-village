@@ -109,10 +109,36 @@ static auto list_audio_devices(const ALCchar* devices) -> void {
   std::cout << "-------------\n";
 }
 
+static inline auto to_al_format(long channels, long samples) -> ALenum {
+  bool stereo = (channels > 1);
+
+  switch (samples) {
+  case 16:
+    if (stereo) {
+      return AL_FORMAT_STEREO16;
+    } else {
+      return AL_FORMAT_MONO16;
+    }
+  case 8:
+    if (stereo) {
+      return AL_FORMAT_STEREO8;
+    } else {
+      return AL_FORMAT_MONO8;
+    }
+  default:
+    return -1;
+  }
+}
+
 auto main(int argc, char** argv) -> int {
   ALCdevice* device;
   ALCcontext* context;
   ALCenum error;
+  ALfloat listenerOri[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f};
+
+  long channels = 0;
+  long samples = 0;
+  long rate = 0;
 
   device = alcOpenDevice(nullptr);
   if (!device) {
@@ -137,15 +163,34 @@ auto main(int argc, char** argv) -> int {
     goto failedDev;
   }
 
-  list_audio_devices(alcGetString(nullptr, ALC_DEVICE_SPECIFIER));
+  alListener3f(AL_POSITION, 0, 0, 1.0f);
+  alGetError();
+  alListener3f(AL_VELOCITY, 0, 0, 0);
+  alGetError();
+  alGetListenerfv(AL_ORIENTATION, listenerOri);
+  alGetError();
 
-#if defined(macintosh) && defined(__MWERKS__)
-  {
-    int argc;
-    char** argcv;
-    argc = ccommand(&argv);
-  }
-#endif
+  ALuint source;
+
+  alGenSources((ALuint)1, &source);
+
+  alSourcef(source, AL_PITCH, 1);
+  alGetError();
+  alSourcef(source, AL_GAIN, 1);
+  alGetError();
+  alSource3f(source, AL_POSITION, 0, 0, 0);
+  alGetError();
+  alSource3f(source, AL_VELOCITY, 0, 0, 0);
+  alGetError();
+  alSourcei(source, AL_LOOPING, AL_FALSE);
+  alGetError();
+
+  ALuint alBuffer;
+
+  alGenBuffers((ALuint)1, &alBuffer);
+  alGetError();
+
+
   do {
     auto p = get_data_dir() / "example.ogg";
 
@@ -168,11 +213,19 @@ auto main(int argc, char** argv) -> int {
         fprintf(stderr, "%s\n", *ptr);
         ++ptr;
       }
+
+      channels = vi->channels;
+      samples = 16;
+      rate = ov_bitrate(&vf, -1);
+      
       fprintf(stderr, "\nBitstream is %d channel, %ldHz\n", vi->channels, vi->rate);
       fprintf(stderr, "\nDecoded length: %ld samples\n", (long)ov_pcm_total(&vf, -1));
       fprintf(stderr, "Encoded by: %s\n\n", ov_comment(&vf, -1)->vendor);
     }
 
+    
+
+   
     std::stringstream ss;
     while (!eof) {
       long ret = ov_read(&vf, buffer, sizeof(buffer), 0, 2, 1, &current_section);
@@ -191,6 +244,28 @@ auto main(int argc, char** argv) -> int {
     audioData = str.c_str();
   } while (0);
 
+  std::cout << channels << " " << samples << "\n";
+
+  alBufferData(alBuffer, to_al_format(channels, samples), buffer, sizeof(buffer), rate);
+  alGetError();
+  alSourcei(source, AL_BUFFER, alBuffer);
+  alGetError();
+
+  int sourceState;
+  alSourcePlay(source);
+  alGetError();
+  alGetSourcei(source, AL_SOURCE_STATE, &sourceState);
+  alGetError();
+  while (sourceState == AL_PLAYING) {
+    alGetSourcei(source, AL_SOURCE_STATE, &sourceState);
+  }
+
+  alDeleteSources(1, &source);
+  alDeleteBuffers(1, &alBuffer);
+  device = alcGetContextsDevice(context);
+  alcMakeContextCurrent(nullptr);
+  alcDestroyContext(context);
+  alcCloseDevice(device);
 
   try {
     g_console = tcod::Console{70, 40};
@@ -223,10 +298,6 @@ auto main(int argc, char** argv) -> int {
     goto failedCtx;
   } catch (const QuitRequest& e) {
   }
-
-  alcMakeContextCurrent(nullptr);
-  alcDestroyContext(context);
-  alcCloseDevice(device);
 
   return EXIT_SUCCESS;
 
