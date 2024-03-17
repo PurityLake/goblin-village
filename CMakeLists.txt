@@ -19,7 +19,7 @@ file(
     ${PROJECT_SOURCE_DIR}/include/*.hpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES} "src/stb_vorbis.c")
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
@@ -46,13 +46,12 @@ endif()
 find_package(SDL2 CONFIG REQUIRED)
 find_package(libtcod CONFIG REQUIRED)
 find_package(OpenAL CONFIG REQUIRED)
-find_package(Stb REQUIRED)
+find_package(Vorbis CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     SDL2::SDL2
     SDL2::SDL2main
     libtcod::libtcod
     OpenAL::OpenAL
-    Stb)
+    Vorbis::vorbisfile)
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    ${Stb_INCLUDE_DIR})
+    ${PROJECT_SOURCE_DIR}/include)
