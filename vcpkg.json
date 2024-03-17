@@ -4,7 +4,7 @@
   "version-semver": "0.0.0",
   "dependencies": [
     "openal-soft",
-    "libvorbis",
+    "stb",
     "sdl2",
     { "name": "libtcod", "default-features": true, "features": [ "png", "sdl", "unicode", "zlib" ] },
     { "name": "sdl2", "default-features": false, "features": [ "x11" ], "platform": "linux" }
