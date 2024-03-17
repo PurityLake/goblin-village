@@ -1,15 +1,25 @@
-#include <SDL.h>
-
+/* C++ */
 #include <cstdlib>
 #include <cstdio>
 #include <filesystem>
 #include <iostream>
-#include <libtcod.hpp>
 
+/* custom */
+#include "error.hpp"
+
+/* libtco d*/
+#include <libtcod.hpp>
+#include <SDL.h>
+
+/* OpenAL */
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include "error.hpp"
+static constexpr auto WHITE = tcod::ColorRGB{255, 255, 255};
+
+static tcod::Console g_console;
+static tcod::Context g_context;
+
 
 auto get_data_dir() -> std::filesystem::path {
   static auto root_dir = std::filesystem::path{"."};
@@ -24,16 +34,11 @@ auto get_data_dir() -> std::filesystem::path {
   return root_dir / "data";
 }
 
-static constexpr auto WHITE = tcod::ColorRGB{255, 255, 255};
-
-static tcod::Console g_console;
-static tcod::Context g_context;
-
 struct Player {
   int x, y;
 } player{10, 10};
 
-void main_loop() {
+auto main_loop() -> void {
   g_console.clear();
   tcod::print(g_console, {player.x, player.y}, "@", {{255, 255, 255}}, {{0, 0, 0}});
   g_context.present(g_console);
@@ -68,7 +73,7 @@ void main_loop() {
   }
 }
 
-static void list_audio_devices(const ALCchar* devices) {
+static auto list_audio_devices(const ALCchar* devices) -> void {
   const ALCchar *device = devices, *next = devices + 1;
   size_t len = 0;
 
@@ -83,7 +88,7 @@ static void list_audio_devices(const ALCchar* devices) {
   std::cout << "-------------\n";
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
   ALCdevice* device;
   ALCcontext* context;
   ALCenum error;
