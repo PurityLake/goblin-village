@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <filesystem>
+#include <sstream>
 #include <iostream>
 
 /* custom */
@@ -33,7 +34,7 @@
 # include <console.h>
 #endif
 
-ogg_int16_t convbuffer[4096];
+char buffer[4096];
 int convsize = 4096;
 
 static constexpr auto WHITE = tcod::ColorRGB{255, 255, 255};
@@ -138,20 +139,6 @@ auto main(int argc, char** argv) -> int {
 
   list_audio_devices(alcGetString(nullptr, ALC_DEVICE_SPECIFIER));
 
-  ogg_sync_state oy;
-  ogg_stream_state os;
-
-  ogg_page og;
-  ogg_packet op;
-
-  vorbis_info vi;
-  vorbis_comment vc;
-  vorbis_dsp_state vd;
-  vorbis_block vb;
-
-  char* buffer;
-  int bytes;
-
 #if defined(macintosh) && defined(__MWERKS__)
   {
     int argc;
@@ -159,84 +146,51 @@ auto main(int argc, char** argv) -> int {
     argc = ccommand(&argv);
   }
 #endif
-  {
-    ogg_sync_init(&oy);
-
+  do {
     auto p = get_data_dir() / "example.ogg";
 
-#if defined(_WIN32) && defined(_MSC_VER)
-    std::FILE* f = _wfopen(p.c_str(), L"r");
-#else
-    std::FILE* f = std::fopen(p.c_str(), "r");
-#endif
+    OggVorbis_File vf{};
+    int eof = 0;
+    int current_section = 0;
+    const char* audioData = nullptr;
 
-    if (!f) {
-      std::cerr << "Failed to open " << p << std::endl;
+    if (ov_fopen(p.string().c_str(), &vf) < 0) {
+      std::cerr << "Input does not appear to be an Ogg file.\n";
       goto failedCtx;
     }
 
-    while (1) {
-      int eos = 0;
-      int i;
-
-      buffer = ogg_sync_buffer(&oy, 4096);
-      bytes = fread(buffer, 1, 4096, f);
-      ogg_sync_wrote(&oy, bytes);
-
-      if (ogg_sync_pageout(&oy, &og) != 1) {
-        if (bytes < 4096) break;
-
-        std::cerr << "Input does not appear to be an Ogg bitsream.\n";
-        goto failedCtx;
+    /* Throw the comments plus a few lines about the bitstream we're
+       decoding */
+    {
+      char** ptr = ov_comment(&vf, -1)->user_comments;
+      vorbis_info* vi = ov_info(&vf, -1);
+      while (*ptr) {
+        fprintf(stderr, "%s\n", *ptr);
+        ++ptr;
       }
+      fprintf(stderr, "\nBitstream is %d channel, %ldHz\n", vi->channels, vi->rate);
+      fprintf(stderr, "\nDecoded length: %ld samples\n", (long)ov_pcm_total(&vf, -1));
+      fprintf(stderr, "Encoded by: %s\n\n", ov_comment(&vf, -1)->vendor);
+    }
 
-      ogg_stream_init(&os, ogg_page_serialno(&og));
-
-      vorbis_info_init(&vi);
-      vorbis_comment_init(&vc);
-      if (ogg_stream_pagein(&os, &og) < 0) {
-        std::cerr << "Error reading first page of Ogg bitstream data.\n";
-        goto failedCtx;
-      }
-
-      if (vorbis_synthesis_headerin(&vi, &vc, &op) < 0) {
-        std::cerr << "This Ogg bitsream does not contain Vorbis audio data.\n";
-        goto failedCtx;
-      }
-
-      i = 0;
-      while (i < 2) {
-        while (i < 2) {
-          int result = ogg_sync_pageout(&oy, &og);
-          if (result == 0) break;
-          if (result == 1) {
-            ogg_stream_pagein(&os, &og);
-            while (i < 2) {
-              result = ogg_stream_packetout(&os, &op);
-              if (result == 0) break;
-              if (result < 0) {
-                std::cerr << "Correutn secondary header.  Exiting.\n";
-                goto failedCtx;
-              }
-              result = vorbis_synthesis_headerin(&vi, &vc, &op);
-              if (result < 0) {
-                std::cerr << "Corrupt secondary header. Exiting.\n";
-                goto failedCtx;
-              }
-              i++;
-            }
-          }
-        }
-        buffer = ogg_sync_buffer(&oy, 4096);
-        bytes = fread(buffer, 1, 4096, f);
-        if (bytes == 0 && i < 2) {
-          std::cerr << "End of file bfore finding all Vorbis headers!\n";
+    std::stringstream ss;
+    while (!eof) {
+      long ret = ov_read(&vf, buffer, sizeof(buffer), 0, 2, 1, &current_section);
+      if (ret == 0) {
+        eof = 1;
+      } else if (ret < 0) {
+        if (ret == OV_EBADLINK) {
+          std::cerr << "Corrupt butsream section! Exiting.\n";
           goto failedCtx;
         }
-        ogg_sync_wrote(&oy, bytes);
+      } else {
+        ss << buffer;
       }
     }
-  }
+    auto str = ss.str();
+    audioData = str.c_str();
+  } while (0);
+
 
   try {
     g_console = tcod::Console{70, 40};
